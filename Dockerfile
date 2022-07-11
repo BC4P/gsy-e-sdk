@@ -4,6 +4,6 @@ ADD . /app
 
 WORKDIR /app
 
-RUN pip install -e .
+RUN pip install -e gsy-framework -e .
 
 ENTRYPOINT ["python"]
