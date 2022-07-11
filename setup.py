@@ -11,9 +11,6 @@ BRANCH = os.environ.get("BRANCH", "master")
 try:
     with open("requirements/base.txt", encoding="utf-8") as req:
         REQUIREMENTS = [r.partition("#")[0] for r in req if not r.startswith("-e")]
-        REQUIREMENTS.extend(
-            ["gsy-framework @ "
-             f"git+https://github.com/gridsingularity/gsy-framework@{BRANCH}"])
 
 except OSError:
     # Shouldn't happen

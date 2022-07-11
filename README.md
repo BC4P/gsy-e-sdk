@@ -39,6 +39,12 @@ In the following commands for the connection via the REST API are marked with `R
 
 ## Installation Instructions
 
+```bash
+git submodule update --init --recursive
+pip install -e gsy-framework
+pip install -e .
+```
+
 Installation of gsy-e-sdk using pip:
 
 ```bash
