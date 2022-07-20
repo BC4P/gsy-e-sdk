@@ -4,37 +4,20 @@
 #
 #    pip-compile --output-file=requirements/base.txt requirements/base.in
 #
--e gsy-framework
+-e ./gsy-framework
     # via -r requirements/base.in
 async-timeout==4.0.2
-    # via
-    #   gsy-framework
-    #   redis
+    # via redis
 attrs==21.4.0
-    # via
-    #   gsy-framework
-    #   jsonschema
+    # via jsonschema
 awesome-slugify==1.6.5
     # via -r requirements/base.in
-bcrypt==3.2.2
-    # via paramiko
 certifi==2022.6.15
-    # via
-    #   gsy-framework
-    #   requests
-cffi==1.15.1
-    # via
-    #   bcrypt
-    #   cryptography
-    #   pynacl
+    # via requests
 cfgv==3.3.1
-    # via
-    #   gsy-framework
-    #   pre-commit
+    # via pre-commit
 charset-normalizer==2.1.0
-    # via
-    #   gsy-framework
-    #   requests
+    # via requests
 click==8.1.3
     # via
     #   -r requirements/base.in
@@ -43,21 +26,12 @@ click-default-group==1.2.2
     # via -r requirements/base.in
 colorlog==6.6.0
     # via -r requirements/base.in
-cryptography==37.0.4
-    # via paramiko
 deprecated==1.2.13
-    # via
-    #   gsy-framework
-    #   redis
-distlib==0.3.4
-    # via
-    #   gsy-framework
-    #   virtualenv
-fabric3==1.14.post1
-    # via -r requirements/base.in
+    # via redis
+distlib==0.3.5
+    # via virtualenv
 filelock==3.7.1
     # via
-    #   gsy-framework
     #   tox
     #   virtualenv
 flake8==4.0.1
@@ -68,83 +42,48 @@ flake8-tuple==0.4.1
     # via gsy-framework
 graphql-core==3.2.1
     # via sgqlc
-identify==2.5.1
-    # via
-    #   gsy-framework
-    #   pre-commit
+identify==2.5.2
+    # via pre-commit
 idna==3.3
-    # via
-    #   gsy-framework
-    #   requests
-jsonschema==4.6.1
+    # via requests
+jsonschema==4.7.2
     # via gsy-framework
 kafka-python==2.0.2
     # via gsy-framework
 mccabe==0.6.1
-    # via
-    #   flake8
-    #   gsy-framework
+    # via flake8
 nodeenv==1.7.0
-    # via
-    #   gsy-framework
-    #   pre-commit
+    # via pre-commit
 packaging==21.3
     # via
-    #   gsy-framework
     #   redis
     #   tox
 parameterized==0.8.1
     # via -r requirements/base.in
-paramiko==2.11.0
-    # via fabric3
 pendulum==2.1.2
     # via gsy-framework
 platformdirs==2.5.2
-    # via
-    #   gsy-framework
-    #   virtualenv
+    # via virtualenv
 pluggy==1.0.0
-    # via
-    #   gsy-framework
-    #   tox
-pre-commit==2.19.0
+    # via tox
+pre-commit==2.20.0
     # via gsy-framework
 py==1.11.0
-    # via
-    #   gsy-framework
-    #   tox
+    # via tox
 pycodestyle==2.8.0
-    # via
-    #   flake8
-    #   gsy-framework
-pycparser==2.21
-    # via cffi
+    # via flake8
 pyflakes==2.4.0
-    # via
-    #   flake8
-    #   gsy-framework
-pynacl==1.5.0
-    # via paramiko
+    # via flake8
 pyparsing==3.0.9
-    # via
-    #   gsy-framework
-    #   packaging
+    # via packaging
 pyrsistent==0.18.1
-    # via
-    #   gsy-framework
-    #   jsonschema
+    # via jsonschema
 python-dateutil==2.8.2
-    # via
-    #   gsy-framework
-    #   pendulum
+    # via pendulum
 pytzdata==2020.1
-    # via
-    #   gsy-framework
-    #   pendulum
+    # via pendulum
 pyyaml==6.0
-    # via
-    #   gsy-framework
-    #   pre-commit
+    # via pre-commit
 redis==4.3.4
     # via gsy-framework
 regex==2022.7.9
@@ -155,10 +94,7 @@ sgqlc==16.0
     # via -r requirements/base.in
 six==1.16.0
     # via
-    #   fabric3
     #   flake8-tuple
-    #   gsy-framework
-    #   paramiko
     #   python-dateutil
     #   tox
     #   virtualenv
@@ -166,20 +102,16 @@ tabulate==0.8.10
     # via gsy-framework
 toml==0.10.2
     # via
-    #   gsy-framework
     #   pre-commit
     #   tox
 tox==3.25.1
     # via gsy-framework
 unidecode==0.4.21
     # via awesome-slugify
-urllib3==1.26.9
-    # via
-    #   gsy-framework
-    #   requests
+urllib3==1.26.10
+    # via requests
 virtualenv==20.15.1
     # via
-    #   gsy-framework
     #   pre-commit
     #   tox
 websockets==10.3
@@ -187,9 +119,7 @@ websockets==10.3
     #   -r requirements/base.in
     #   gsy-framework
 wrapt==1.14.1
-    # via
-    #   deprecated
-    #   gsy-framework
+    # via deprecated
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools

@@ -34,15 +34,11 @@ electrical grid and place offers for its energy production, and bids for its ene
 For local test runs of GSy Exchange Redis (https://redis.io/) is used as communication protocol.
 In the following commands for the local test run are marked with `LOCAL`.
 
-For communication with collaborations or canary networks on https://d3a.io, a RESTful API is used.
-In the following commands for the connection via the REST API are marked with `REST`.
-
 ## Installation Instructions
 
 ```bash
 git submodule update --init --recursive
-pip install -e gsy-framework
-pip install -e .
+pip install -e . -e gsy-framework
 ```
 
 Installation of gsy-e-sdk using pip:
