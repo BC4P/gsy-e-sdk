@@ -6,4 +6,4 @@ WORKDIR /app
 
 RUN pip install -e gsy-framework -e .
 
-ENTRYPOINT ["gsy-e-sdk run"]
+ENTRYPOINT ["gsy-e-sdk"]

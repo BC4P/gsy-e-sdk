@@ -133,3 +133,4 @@ dmypy.json
 .docker/
 dump.rdb
 *.DS_Store
+.vscode

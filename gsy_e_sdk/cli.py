@@ -130,3 +130,7 @@ def load_client_script(base_setup_path, setup_module_name):
         raise click.BadOptionUsage(ex.args[0], "Error when loading setup module.")
     except ModuleNotFoundError:
         log.exception("Could not find the specified module")
+
+
+if __name__ == '__main__':
+    run(['--setup', 'asset_api_scripts.redis_basic_strategies', '--run-on-redis'])

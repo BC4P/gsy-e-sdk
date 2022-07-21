@@ -1,0 +1,31 @@
+version: "3.9"
+
+services:
+  redis:
+    image: redis:latest
+    ports:
+      - 6379:6379
+
+  gsy-market:
+    image: ghcr.io/bc4p/gsy-e:latest
+    command: run --setup api_setup.default_community --enable-external-connection
+    volumes:
+      - ./gsy_e-simulation/:/root/gsy_e-simulation # ~/gsy_e-simulation
+    environment:
+      - REDIS_URL=redis://redis
+    depends_on:
+      - redis
+
+  gsy-client:
+    image: ghcr.io/bc4p/gsy-e-sdk:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    entrypoint: bash -c "sleep 10 && gsy-e-sdk run --setup asset_api_scripts.redis_basic_strategies --run-on-redis"
+    environment:
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      gsy-market:
+          condition: service_started
+      redis:
+          condition: service_started
