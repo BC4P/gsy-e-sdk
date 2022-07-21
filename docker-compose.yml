@@ -21,7 +21,18 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    entrypoint: bash -c "sleep 10 && gsy-e-sdk run --setup asset_api_scripts.redis_basic_strategies --run-on-redis"
+    entrypoint: bash -c "sleep 9 && gsy-e-sdk --log-level INFO run --setup asset_api_scripts.redis_basic_strategies --run-on-redis"
+    environment:
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      gsy-market:
+          condition: service_started
+      redis:
+          condition: service_started
+
+  gsy-operator:
+    image: ghcr.io/bc4p/gsy-e-sdk:latest
+    entrypoint: bash -c "sleep 11 && gsy-e-sdk --log-level INFO run --setup grid_operator_api_scripts.redis_tou_strategy --run-on-redis"
     environment:
       - REDIS_URL=redis://redis:6379
     depends_on:
