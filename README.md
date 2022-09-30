@@ -104,6 +104,8 @@ The constructor of the API class can connect and register automatically to a run
 - `REST`
   (here the asset uuid has to be obtained first)
     ```python
+    from gsy_e_sdk.clients.rest_asset_client import RedisAssetClient
+
     asset_uuid = get_area_uuid_from_area_name_and_collaboration_id(
                   <simulation_id>, <asset_name>, <domain_name>
                   )
@@ -111,6 +113,8 @@ The constructor of the API class can connect and register automatically to a run
     ```
 - `LOCAL`
     ```python
+    from gsy_e_sdk.clients.redis_asset_client import RedisAssetClient
+    
     asset_client = RedisAssetClient(<asset-uuid>, autoregister=True)
     ```
 
