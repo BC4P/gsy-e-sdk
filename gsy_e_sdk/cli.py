@@ -133,4 +133,4 @@ def load_client_script(base_setup_path, setup_module_name):
 
 
 if __name__ == '__main__':
-    run(['--setup', 'asset_api_scripts.redis_basic_strategies', '--run-on-redis'])
+    run(['--setup', 'asset_api_scripts.bc4p.pxl', '--run-on-redis'])

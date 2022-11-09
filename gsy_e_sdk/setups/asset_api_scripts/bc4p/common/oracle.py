@@ -1,23 +1,5 @@
-"""
-Template file for a trading strategy through the gsy-e-sdk api client using Redis.
-"""
-
-from time import sleep
 from typing import List, Dict
 from gsy_e_sdk.redis_aggregator import RedisAggregator
-from gsy_e_sdk.clients.redis_asset_client import RedisAssetClient
-
-ORACLE_NAME = "oracle"
-
-# List of assets' names to be connected with the API
-LOAD_NAMES = ["main_P_L1", "main_P_L2", "main_P_L3"]
-PV_NAMES = ["PV_LS_105A_power", "PV_LS_105B_power", "PV_LS_105E_power"]
-
-
-
-# Frequency of bids/offers posting in a market slot - to leave as it is
-TICK_DISPATCH_FREQUENCY_PERCENT = 10
-
 
 class Oracle(RedisAggregator):
     """Class that defines the behaviour of an "oracle" aggregator."""
@@ -26,6 +8,7 @@ class Oracle(RedisAggregator):
         super().__init__(*args, **kwargs)
         self.is_finished = False
         self.asset_strategy = {}
+        self.TICK_DISPATCH_FREQUENCY_PERCENT = 10
 
     def on_market_slot(self, market_info):
         """Place a bid or an offer whenever a new market is created."""
@@ -37,7 +20,7 @@ class Oracle(RedisAggregator):
     def on_tick(self, tick_info):
         """Place a bid or an offer each 10% of the market slot progression."""
         rate_index = int(float(tick_info["slot_completion"].strip("%")) /
-                         TICK_DISPATCH_FREQUENCY_PERCENT)
+                         self.TICK_DISPATCH_FREQUENCY_PERCENT)
         
         self.post_bid_offer(rate_index)
 
@@ -66,13 +49,13 @@ class Oracle(RedisAggregator):
             # Consumption strategy
             if "energy_requirement_kWh" in area_dict["asset_info"]:
                 load_strategy = []
-                for tick in range(0, TICK_DISPATCH_FREQUENCY_PERCENT):
-                    if tick < TICK_DISPATCH_FREQUENCY_PERCENT - 2:
+                for tick in range(0, self.TICK_DISPATCH_FREQUENCY_PERCENT):
+                    if tick < self.TICK_DISPATCH_FREQUENCY_PERCENT - 2:
                         buy_rate = (fit_rate -
                                     self.asset_strategy[area_uuid]["fee_to_market_maker"] +
                                     (market_maker_rate +
                                      2 * self.asset_strategy[area_uuid]["fee_to_market_maker"] -
-                                     fit_rate) * (tick / TICK_DISPATCH_FREQUENCY_PERCENT)
+                                     fit_rate) * (tick / self.TICK_DISPATCH_FREQUENCY_PERCENT)
                                     )
                         load_strategy.append(buy_rate)
                     else:
@@ -84,13 +67,13 @@ class Oracle(RedisAggregator):
             # Generation strategy
             if "available_energy_kWh" in area_dict["asset_info"]:
                 gen_strategy = []
-                for tick in range(0, TICK_DISPATCH_FREQUENCY_PERCENT):
-                    if tick < TICK_DISPATCH_FREQUENCY_PERCENT - 2:
+                for tick in range(0, self.TICK_DISPATCH_FREQUENCY_PERCENT):
+                    if tick < self.TICK_DISPATCH_FREQUENCY_PERCENT - 2:
                         sell_rate = (market_maker_rate +
                                      self.asset_strategy[area_uuid]["fee_to_market_maker"] -
                                      (market_maker_rate +
                                       2 * self.asset_strategy[area_uuid]["fee_to_market_maker"] -
-                                      fit_rate) * (tick / TICK_DISPATCH_FREQUENCY_PERCENT)
+                                      fit_rate) * (tick / self.TICK_DISPATCH_FREQUENCY_PERCENT)
                                      )
                         gen_strategy.append(max(0, sell_rate))
                     else:
@@ -103,21 +86,21 @@ class Oracle(RedisAggregator):
             if "used_storage" in area_dict["asset_info"]:
                 batt_buy_strategy = []
                 batt_sell_strategy = []
-                for tick in range(0, TICK_DISPATCH_FREQUENCY_PERCENT):
+                for tick in range(0, self.TICK_DISPATCH_FREQUENCY_PERCENT):
                     buy_rate = (fit_rate -
                                 self.asset_strategy[area_uuid]["fee_to_market_maker"] +
                                 (med_price -
                                  (fit_rate -
                                   self.asset_strategy[area_uuid]["fee_to_market_maker"]
                                   )
-                                 ) * (tick / TICK_DISPATCH_FREQUENCY_PERCENT)
+                                 ) * (tick / self.TICK_DISPATCH_FREQUENCY_PERCENT)
                                 )
                     batt_buy_strategy.append(buy_rate)
                     sell_rate = (market_maker_rate +
                                  self.asset_strategy[area_uuid]["fee_to_market_maker"] -
                                  (market_maker_rate +
                                   self.asset_strategy[area_uuid]["fee_to_market_maker"] -
-                                  med_price) * (tick / TICK_DISPATCH_FREQUENCY_PERCENT)
+                                  med_price) * (tick / self.TICK_DISPATCH_FREQUENCY_PERCENT)
                                  )
                     batt_sell_strategy.append(sell_rate)
                 self.asset_strategy[area_uuid]["buy_rates"] = batt_buy_strategy
@@ -169,33 +152,3 @@ class Oracle(RedisAggregator):
 
     def on_finish(self, finish_info):
         self.is_finished = True
-
-
-aggregator = Oracle(aggregator_name=ORACLE_NAME)
-asset_args = {"autoregister": True, "pubsub_thread": aggregator.pubsub}
-
-
-def register_asset_list(asset_names: List, asset_params: Dict, asset_uuid_map: Dict) -> Dict:
-    """Register the provided list of assets with the aggregator."""
-    for asset_name in asset_names:
-        print("Registered asset:", asset_name)
-        asset_params["area_id"] = asset_name
-        asset = RedisAssetClient(**asset_params)
-        asset_uuid_map[asset.area_uuid] = asset.area_id
-        asset.select_aggregator(aggregator.aggregator_uuid)
-    return asset_uuid_map
-
-
-print()
-print("Registering assets ...")
-asset_uuid_mapping = {}
-asset_uuid_mapping = register_asset_list(LOAD_NAMES + PV_NAMES,
-                                         asset_args, asset_uuid_mapping)
-print()
-print("Summary of assets registered:")
-print()
-print(asset_uuid_mapping)
-
-# loop to allow persistence
-while not aggregator.is_finished:
-    sleep(0.5)

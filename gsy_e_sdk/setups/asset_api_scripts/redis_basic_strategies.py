@@ -37,6 +37,7 @@ class Oracle(RedisAggregator):
         """Place a bid or an offer each 10% of the market slot progression."""
         rate_index = int(float(tick_info["slot_completion"].strip("%")) /
                          TICK_DISPATCH_FREQUENCY_PERCENT)
+        
         self.post_bid_offer(rate_index)
 
     def build_strategies(self, market_info):
