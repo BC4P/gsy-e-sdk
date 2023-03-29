@@ -32,10 +32,11 @@ class RedisAggregator:
     # pylint: disable = too-many-instance-attributes
     def __init__(self, aggregator_name, accept_all_devices=True,
                  redis_url=LOCAL_REDIS_URL):
-
         self.grid_fee_calculation = GridFeeCalculation()
+
         self.redis_db = Redis.from_url(redis_url)
         self.pubsub = self.redis_db.pubsub()
+
         self.aggregator_name = aggregator_name
         self.aggregator_uuid = None
         self.accept_all_devices = accept_all_devices
@@ -52,6 +53,7 @@ class RedisAggregator:
         self.latest_grid_tree_flat = {}
         self.area_name_uuid_mapping = {}
 
+
     def _connect_and_subscribe(self) -> None:
         # order matters here, first connect to the simulation,
         # then subscribe to all other channels that contain the aggregator_uuid
@@ -59,15 +61,22 @@ class RedisAggregator:
         self._connect_to_simulation()
         self._subscribe_to_response_channels()
 
+
     def _subscribe_to_aggregator_response_and_start_redis_thread(self) -> None:
         channel_dict = {"aggregator_response": self._aggregator_response_callback}
+        print("subscribing to aggregator response and")
         self.pubsub.psubscribe(**channel_dict)
-        self.pubsub.run_in_thread(daemon=True)
+        print("run thread")
+
+        self.pubsub.run_in_thread(daemon=True, sleep_time=1)
+        print("done")
+
 
     def _connect_to_simulation(self, is_blocking: bool = True) -> None:
         if self.aggregator_uuid is None:
             aggr_id = self._create_aggregator(is_blocking=is_blocking)
             self.aggregator_uuid = aggr_id
+
 
     def _subscribe_to_response_channels(self) -> None:
         channel_dict = {f"external-aggregator/*/{self.aggregator_uuid}/events/all":

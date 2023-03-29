@@ -1,30 +1,24 @@
-# pylint: disable=duplicate-code
 """
-Template file for a trading strategy through the gsy-e-sdk api client using Rest.
+Template file for a trading strategy through the gsy-e-sdk api client using Redis.
 """
 
-import os
 from time import sleep
 from typing import List, Dict
-from gsy_e_sdk.aggregator import Aggregator
-from gsy_e_sdk.utils import get_assets_name
-from gsy_e_sdk.clients.rest_asset_client import RestAssetClient
-from gsy_e_sdk.utils import get_area_uuid_from_area_name_and_collaboration_id
+from gsy_e_sdk.redis_aggregator import RedisAggregator
+from gsy_e_sdk.clients.redis_asset_client import RedisAssetClient
 
 ORACLE_NAME = "oracle"
 
-# List of assets's names to be connected with the API
-LOAD_NAMES = ["Load L13", "Load 2 L21", "Load 3 L17"]
-PV_NAMES = ["PV 2 (1kW)", "PV 3 (5kW)"]
-STORAGE_NAMES = ["Tesla Powerwall 3"]
+# List of assets' names to be connected with the API
+LOAD_NAMES = ["Load 5 L9"]
+PV_NAMES = ["PV 5 (10kW)"]
+STORAGE_NAMES = []
 
-# Frequency of bids/offers posting in a market slot - to leave as it is
+# # Frequency of bids/offers posting in a market slot - to leave as it is
 TICK_DISPATCH_FREQUENCY_PERCENT = 10
 
-CONNECT_TO_ALL_ASSETS = True
 
-
-class Oracle(Aggregator):
+class Oracle(RedisAggregator):
     """Class that defines the behaviour of an "oracle" aggregator."""
 
     def __init__(self, *args, **kwargs):
@@ -37,23 +31,24 @@ class Oracle(Aggregator):
         if self.is_finished is True:
             return
         self.build_strategies(market_info)
-        self.add_bids_offers_to_batch()
-        self.execute_batch_commands()
+        self.post_bid_offer()
 
     def on_tick(self, tick_info):
         """Place a bid or an offer each 10% of the market slot progression."""
         rate_index = int(float(tick_info["slot_completion"].strip("%")) /
                          TICK_DISPATCH_FREQUENCY_PERCENT)
-        self.add_bids_offers_to_batch(rate_index)
-        self.execute_batch_commands()
+        self.post_bid_offer(rate_index)
 
     def build_strategies(self, market_info):
         """
         Assign a simple strategy to each asset in the form of an array of length 10,
         ranging between Feed-in Tariff and Market Maker rates.
         """
-        fit_rate = market_info["feed_in_tariff_rate"]
+        fit_rate = market_info["feed_in_tariff_rate"] or 0
         market_maker_rate = market_info["market_maker_rate"]
+
+
+
         med_price = (market_maker_rate - fit_rate) / 2 + fit_rate
 
         for area_uuid, area_dict in self.latest_grid_tree_flat.items():
@@ -65,7 +60,7 @@ class Oracle(Aggregator):
                 "fee_to_market_maker"
             ] = self.calculate_grid_fee(
                 area_uuid,
-                self.get_uuid_from_area_name("Grid Market"),
+                self.get_uuid_from_area_name("Market Maker"),
                 "current_market_fee",
             )
 
@@ -82,8 +77,8 @@ class Oracle(Aggregator):
                                     )
                         load_strategy.append(buy_rate)
                     else:
-                        buy_rate = market_maker_rate + (
-                            self.asset_strategy[area_uuid]["fee_to_market_maker"])
+                        buy_rate = (market_maker_rate +
+                                    self.asset_strategy[area_uuid]["fee_to_market_maker"])
                         load_strategy.append(buy_rate)
                 self.asset_strategy[area_uuid]["buy_rates"] = load_strategy
 
@@ -129,7 +124,7 @@ class Oracle(Aggregator):
                 self.asset_strategy[area_uuid]["buy_rates"] = batt_buy_strategy
                 self.asset_strategy[area_uuid]["sell_rates"] = batt_sell_strategy
 
-    def add_bids_offers_to_batch(self, rate_index=0):
+    def post_bid_offer(self, rate_index=0):
         """Post a bid or an offer to the exchange."""
         for area_uuid, area_dict in self.latest_grid_tree_flat.items():
             asset_info = area_dict.get("asset_info")
@@ -141,7 +136,7 @@ class Oracle(Aggregator):
             if required_energy:
                 rate = self.asset_strategy[area_uuid]["buy_rates"][rate_index]
                 self.add_to_batch_commands.bid_energy_rate(
-                    asset_uuid=area_uuid, rate=rate, energy=required_energy, replace_existing=True
+                    asset_uuid=area_uuid, rate=rate, energy=required_energy
                 )
 
             # Generation assets
@@ -149,27 +144,25 @@ class Oracle(Aggregator):
             if available_energy:
                 rate = self.asset_strategy[area_uuid]["sell_rates"][rate_index]
                 self.add_to_batch_commands.offer_energy_rate(
-                    asset_uuid=area_uuid, rate=rate, energy=available_energy, replace_existing=True
+                    asset_uuid=area_uuid, rate=rate, energy=available_energy
                 )
 
             # Storage assets
-            buy_energy = asset_info.get("energy_to_buy", 0)
-            open_bids_energy = asset_info.get("energy_active_in_bids", 0)
-            if buy_energy > 0 or open_bids_energy > 0:
+            buy_energy = asset_info.get("energy_to_buy")
+            if buy_energy:
                 buy_rate = self.asset_strategy[area_uuid]["buy_rates"][rate_index]
-                buy_energy = buy_energy + open_bids_energy
                 self.add_to_batch_commands.bid_energy_rate(
-                    asset_uuid=area_uuid, rate=buy_rate, energy=buy_energy, replace_existing=True
+                    asset_uuid=area_uuid, rate=buy_rate, energy=buy_energy
                 )
 
-            sell_energy = asset_info.get("energy_to_sell", 0)
-            open_offers_energy = asset_info.get("energy_active_in_offers", 0)
-            if sell_energy > 0 or open_offers_energy > 0:
+            sell_energy = asset_info.get("energy_to_sell")
+            if sell_energy:
                 sell_rate = self.asset_strategy[area_uuid]["sell_rates"][rate_index]
-                sell_energy = sell_energy + open_offers_energy
                 self.add_to_batch_commands.offer_energy_rate(
-                    asset_uuid=area_uuid, rate=sell_rate, energy=sell_energy, replace_existing=True
+                    asset_uuid=area_uuid, rate=sell_rate, energy=sell_energy
                 )
+
+            self.execute_batch_commands()
 
     def on_event_or_response(self, message):
         pass
@@ -178,38 +171,34 @@ class Oracle(Aggregator):
         self.is_finished = True
 
 
-aggregator = Oracle(aggregator_name=ORACLE_NAME)
-simulation_id = os.environ["API_CLIENT_SIMULATION_ID"]
-domain_name = os.environ["API_CLIENT_DOMAIN_NAME"]
-websockets_domain_name = os.environ["API_CLIENT_WEBSOCKET_DOMAIN_NAME"]
-asset_args = {"autoregister": False, "start_websocket": False}
-if CONNECT_TO_ALL_ASSETS:
-    registry = aggregator.get_configuration_registry()
-    registered_assets = get_assets_name(registry)
-    LOAD_NAMES = registered_assets["Load"]
-    PV_NAMES = registered_assets["PV"]
-    STORAGE_NAMES = registered_assets["Storage"]
 
-
-def register_asset_list(asset_names: List, asset_params: Dict, asset_uuid_map: Dict) -> Dict:
+def register_asset_list(asset_names: List, asset_params: Dict, asset_uuid_map: Dict, aggregator:Oracle) -> Dict:
     """Register the provided list of assets with the aggregator."""
     for asset_name in asset_names:
         print("Registered asset:", asset_name)
-        uuid = get_area_uuid_from_area_name_and_collaboration_id(
-            simulation_id, asset_name, domain_name
-        )
-        asset_params["asset_uuid"] = uuid
-        asset_uuid_map[uuid] = asset_name
-        asset = RestAssetClient(**asset_params)
-        asset.select_aggregator(aggregator.aggregator_uuid)
-    return asset_uuid_map
+        asset_params["area_id"] = asset_name
+        print("redis asset client")
+        asset = RedisAssetClient(**asset_params)
+        print("redis asset client - done")
 
+        print("ASSET",asset)
+
+        asset_uuid_map[asset.area_uuid] = asset.area_id
+        print("selecting aggregator")
+
+        asset.select_aggregator(aggregator.aggregator_uuid)
+        print("aggregator selected")
+
+    return asset_uuid_map
+# print("ok")
+aggregator = Oracle(aggregator_name=ORACLE_NAME)
+asset_args = {"autoregister": True, "pubsub_thread": aggregator.pubsub, 'is_blocking':True}
 
 print()
 print("Registering assets ...")
 asset_uuid_mapping = {}
 asset_uuid_mapping = register_asset_list(LOAD_NAMES + PV_NAMES + STORAGE_NAMES,
-                                         asset_args, asset_uuid_mapping)
+                                         asset_args, asset_uuid_mapping, aggregator)
 print()
 print("Summary of assets registered:")
 print()

@@ -10,13 +10,12 @@ from gsy_e_sdk.clients.redis_asset_client import RedisAssetClient
 ORACLE_NAME = "oracle"
 
 # List of assets' names to be connected with the API
-LOAD_NAMES = ["Load 1 L13", "Load 2 L21", "Load 3 L17"]
-PV_NAMES = ["PV 1 (4kW)", "PV 3 (5kW)"]
-STORAGE_NAMES = ["Tesla Powerwall 3"]
+LOAD_NAMES = ["Load 5 L9"]
+PV_NAMES = ["PV 5 (10kW)"]
+STORAGE_NAMES = []
 
 # Frequency of bids/offers posting in a market slot - to leave as it is
 TICK_DISPATCH_FREQUENCY_PERCENT = 10
-
 
 class Oracle(RedisAggregator):
     """Class that defines the behaviour of an "oracle" aggregator."""
@@ -173,7 +172,7 @@ aggregator = Oracle(aggregator_name=ORACLE_NAME)
 asset_args = {"autoregister": True, "pubsub_thread": aggregator.pubsub}
 
 
-def register_asset_list(asset_names: List, asset_params: Dict, asset_uuid_map: Dict) -> Dict:
+def register_asset_list(asset_names: List, asset_params: Dict, asset_uuid_map: Dict, aggregator:Oracle) -> Dict:
     """Register the provided list of assets with the aggregator."""
     for asset_name in asset_names:
         print("Registered asset:", asset_name)
@@ -188,7 +187,7 @@ print()
 print("Registering assets ...")
 asset_uuid_mapping = {}
 asset_uuid_mapping = register_asset_list(LOAD_NAMES + PV_NAMES + STORAGE_NAMES,
-                                         asset_args, asset_uuid_mapping)
+                                         asset_args, asset_uuid_mapping, aggregator)
 print()
 print("Summary of assets registered:")
 print()

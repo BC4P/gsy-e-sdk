@@ -17,9 +17,10 @@ class RedisAPIException(Exception):
 
 class RedisClientBase(APIClientInterface):
     def __init__(self, area_id, autoregister=True, redis_url=LOCAL_REDIS_URL,
-                 pubsub_thread=None):
+                 pubsub_thread=None, is_blocking=False):
         super().__init__(area_id, autoregister, redis_url)
         self.area_uuid = None
+        self.is_blocking = is_blocking
         self.redis_db = Redis.from_url(redis_url)
         self.pubsub = self.redis_db.pubsub() if pubsub_thread is None else pubsub_thread
         self.area_id = area_id
@@ -29,23 +30,33 @@ class RedisClientBase(APIClientInterface):
         self._transaction_id_buffer = []
         self._subscribed_aggregator_response_cb = None
         self._subscribe_to_response_channels(pubsub_thread)
+        print("executor")
+
         self.executor = ThreadPoolExecutor(max_workers=MAX_WORKER_THREADS)
+        print("executor -2 ")
+
         if autoregister:
-            self.register(is_blocking=True)
+            self.register(is_blocking=self.is_blocking)
+        print("executor -done")
+
 
     def _subscribe_to_response_channels(self, pubsub_thread=None):
+        print("sub to channels")
         channel_subs = {
             f"{self.area_id}/response/register_participant": self._on_register,
             f"{self.area_id}/response/unregister_participant": self._on_unregister,
             f"{self.area_id}/*": self._on_event_or_response}
-
+        print("channel subs",channel_subs)
         if b'aggregator_response' in self.pubsub.patterns:
             self._subscribed_aggregator_response_cb = self.pubsub.patterns[b'aggregator_response']
         channel_subs["aggregator_response"] = self._aggregator_response_callback
 
         self.pubsub.psubscribe(**channel_subs)
+        print(self.redis_db.pubsub_channels())
         if pubsub_thread is None:
-            self.pubsub.run_in_thread(daemon=True)
+            print("running pubsub thread 2")
+            self.pubsub.run_in_thread(daemon=True, sleep_time=0.1)
+        print("sub to channels - done")
 
     def _aggregator_response_callback(self, message):
         if self._subscribed_aggregator_response_cb is not None:
@@ -78,11 +89,13 @@ class RedisClientBase(APIClientInterface):
             raise RedisAPIException('API is already registered to the market.')
         data = {"name": self.area_id, "transaction_id": str(uuid.uuid4())}
         self._blocking_command_responses["register"] = data
+        print("publishing")
         self.redis_db.publish(f'{self.area_id}/register_participant', json.dumps(data))
+        print("publishing - done")
 
         if is_blocking:
             try:
-                wait_until_timeout_blocking(lambda: self.is_active, timeout=120)
+                wait_until_timeout_blocking(lambda: self.is_active, timeout=10)
             except AssertionError:
                 raise RedisAPIException(
                     'API registration process timed out. Server will continue processing your '
@@ -102,6 +115,7 @@ class RedisClientBase(APIClientInterface):
         if is_blocking:
             try:
                 wait_until_timeout_blocking(lambda: not self.is_active, timeout=120)
+                print("IS active",self.is_active)
             except AssertionError:
                 raise RedisAPIException(
                     'API unregister process timed out. Server will continue processing your '
@@ -109,6 +123,7 @@ class RedisClientBase(APIClientInterface):
                     'has been completed.')
 
     def _on_register(self, msg):
+        print('RESPONSE OF REGISTRATION')
         message = json.loads(msg["data"])
         self._check_buffer_message_matching_command_and_id(message)
         self.area_uuid = message["device_uuid"]
@@ -117,7 +132,7 @@ class RedisClientBase(APIClientInterface):
         self.is_active = True
 
         def executor_function():
-            self.on_register(message)
+            self.on_register(message)   
 
         self.executor.submit(executor_function)
 
@@ -137,6 +152,7 @@ class RedisClientBase(APIClientInterface):
                              function_name="on_event_or_response")
 
     def select_aggregator(self, aggregator_uuid, is_blocking=True):
+        print(self.area_uuid)
         if not self.area_uuid:
             raise RedisAPIException("The device/market has not ben registered yet, "
                                     "can not select an aggregator")
